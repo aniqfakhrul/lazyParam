@@ -81,7 +81,7 @@ def vulnerable(response, vuln):
         else:
             return False
 
-def checkParams(response, url, headers):
+def checkParams(response, url, headers, bypass_char):
     breaker_rce = False
     breaker_lfi = False
     values = ['../../../../../../../../etc/passwd', 'w']
@@ -92,6 +92,7 @@ def checkParams(response, url, headers):
         if breaker_lfi and breaker_rce:
             break
         for value in values:
+            value = '%s%s' % (value,bypass_char)
             data = {param:value}
             response = requester(url=url, method='GET', data=data, headers=headers)
             if len(response.text) != originalLength: # Found!
@@ -117,6 +118,7 @@ def checkParams(response, url, headers):
     print("%s Checking for POST request..." % good)
     for param in paramList:
         for value in values:
+            value = '%s%s' % (value,bypass_char)
             data = {param:value}
             response = requester(url=url, method='POST', data=data, headers=headers)
             if len(response.text) != originalLength:
@@ -137,6 +139,19 @@ def checkParams(response, url, headers):
         print("%s Trying: %s" % (info,param), end="\r", flush=True)
     return foundParams
 
+def intensive(response, url, headers):
+    # loading bypassing wordlist
+    bypass_chars = []
+    with open('db/bypass_chars.txt','r', encoding="utf8") as file:
+        for line in file:
+            bypass_chars.append(line.strip())
+    for char in bypass_chars:
+        print("%s Trying with %s" % (info,char))
+        checkParams(response,url,headers, char)
+
+
+
+
 if __name__ == "__main__":
     foundParams = []
     finalResult = []
@@ -145,6 +160,8 @@ if __name__ == "__main__":
     LFI = False
     try:
         if url:
+            if 'http' not in url:
+                url = 'http://%s' % url
             try:
                 originalFuzz = get_random_string(6)
                 data = {originalFuzz:originalFuzz}
@@ -154,10 +171,11 @@ if __name__ == "__main__":
                 parse(response.text)
                 # lfi and rce checking
                 start_time = time.time() # Start execution time
-                checkParams(response, url, headers)
+                checkParams(response, url, headers, bypass_char='')
                 if not foundParams:
                     print("%s No parameter found, trying bypassing techniques..." % info)
                     # bypassed_chars = checkParams()
+                    intensive(response, url, headers)
                 else:
                     print("%s Vulnerable parameters: "% good)
                     for param in foundParams:
