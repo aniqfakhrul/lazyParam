@@ -10,10 +10,10 @@ lazyParams is a simple automation tool for checking hidden parameters in a page.
 
 Fuzz parameters with build in wordlists
 ```
-python3 lazyParams.py -u http://example.com/file.php
+python3 lazyparam.py -u http://example.com/file.php
 ```
 
 Fuzz with custom wordlist
 ```
-python3 lazyParams.py -u http://example.com/file.php -w wordlists.lst
+python3 lazyparam.py -u http://example.com/file.php -w wordlists.lst
 ```
