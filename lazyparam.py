@@ -95,7 +95,6 @@ def vulnerable(response, vuln):
 def checkUrlParams(url, param, method, values, originalLength):
     breaker_rce = False
     breaker_lfi = False
-    #method = currentMethod
     for value in values:
         value = '%s%s' % (value,bypass_char)
         data = {param:value}
@@ -173,6 +172,7 @@ def intensive(response, url, headers):
             bypass_chars.append(line.strip())
     for char in bypass_chars:
         print("%s Trying with %s" % (info,char))
+        global bypass_char
         bypass_char = char
         checkParams(response, url, headers)
 
