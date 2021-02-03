@@ -8,9 +8,9 @@ lazyParam is a simple automation tool with implementation of multi-threading cre
 * Use intensive mode with characters bypassing techniques (beta)
 * Check for LFI, RCE and SSTI 
 
-# Todo 
+# Todo
 
-* Implement SSTI checking
+* XSS checking
 
 # Usage
 
