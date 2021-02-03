@@ -23,3 +23,5 @@ Specify custom wordlist
 python3 lazyparam.py -u http://example.com/file.php -w wordlists.lst
 ```
 
+![Example](https://media.discordapp.net/attachments/703994557339140326/806503665006936104/2021-02-03-15-47-24.gif?width=1202&height=676)
+
