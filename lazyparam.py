@@ -199,7 +199,7 @@ if __name__ == "__main__":
                 # initialize threads
                 for x in range(num_threads):
                     t = threading.Thread(target=threader, args=(originalLength,))
-                    #t.daemon = True
+                    t.daemon = True
                     t.start()
                 print("\n%s Running with %d threads" % (info,num_threads))
                 # lfi and rce checking
