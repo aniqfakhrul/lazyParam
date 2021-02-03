@@ -6,6 +6,7 @@ lazyParam is a simple automation tool with implementation of multi-threading cre
 * Fuzz parameters for both GET and POST method
 * Multi-threaded _(Default: 4)_
 * Use intensive mode with characters bypassing techniques (beta)
+* Check for LFI, RCE and SSTI 
 
 # Todo 
 
