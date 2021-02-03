@@ -80,23 +80,14 @@ def parse(response):
     if not forms:
         print("%s No parameters found in webpage:" % bad)
 
-def vulnerable(response, vuln):
-    if vuln == 'rce': #Check RCE
-        if 'tty' in response.lower():
-            return True
-        else:
-            return False
-    if vuln == 'lfi': #Check LFI
-        if 'root:' in response.lower():
-            return True
-        else:
-            return False
-    #implementation of SSTI 
-    if vuln == 'ssti': #Check SSTI
-    	if '99980001' in response.lower():
-    	    return True
-    	else:
-    	    return False
+def vulnerable(response):
+    if 'tty' in response.lower():#Check RCE
+        return "rce"
+    if 'root:' in response.lower(): #Check LFI
+        return "lfi"
+    if '99980001' in response.lower(): #Check SSTI
+        return "ssti"
+    return ""
 
 # checkParams iteration wrapped in one function
 def checkUrlParams(url, param, method, values, originalLength):
@@ -108,36 +99,22 @@ def checkUrlParams(url, param, method, values, originalLength):
         data = {param:value}
         response = requester(url=url, method=method, data=data, headers=headers)
         if (len(response.text) != originalLength) and (response.status_code != 405): # Found!
-            if value == 'w' : #  RCE Found
-                if vulnerable(response.text, vuln="rce"):
-                    with print_lock:
-                        print("%s Found valid param: %s%s %s%s(RCE!)%s"  % (good, green,param,bold,yellow,end))
-                        foundParams.insert(0, param)
-                        breaker_rce = True
-                else:
-                    with print_lock:
-                        print("%s Found valid param (This might be false positive): %s%s%s" % (info, green,param,end))
-                        
-            elif value == '{{9999*9999}}': #SSTI Found
-                if vulnerable(response.text, vuln="ssti"):
-                    with print_lock:
-                        print("%s Found valid param: %s%s %s%s(SSTI!)%s"  % (good, green,param,bold,yellow,end))
-                        foundParams.insert(0,param)
-                        breaker_ssti = True
-                else:
-                    with print_lock:
-                        print("%s Found valid param (This might be false positive): %s%s%s" % (info, green,param,end))
-                      
-          
-            elif value != 'w': #LFI Found
-                if vulnerable(response.text, vuln="lfi"):
-                    with print_lock:
-                        print("%s Found valid param: %s%s%s (%s?%s=%s)"  % (good,green,param,end,url,param,value))
-                        foundParams.insert(0, param)
-                        breaker_lfi = True
-                else:
-                    with print_lock:
-                        print("%s Found valid param (This might be false positive): %s%s%s" % (info, green,param,end))
+            results = vulnerable(response.text)
+            if results == 'rce' : #  RCE Found
+                with print_lock:
+                    print("%s Found valid param: %s%s %s%s(RCE!)%s"  % (good, green,param,bold,yellow,end))
+                foundParams.insert(0, param)
+            elif results == 'lfi':
+                with print_lock:
+                    print("%s Found valid param: %s%s%s (%s?%s=%s)"  % (good,green,param,end,url,param,value))
+                foundParams.insert(0, param)
+            elif results == 'ssti':
+                with print_lock:
+                    print("%s Found valid param: %s%s %s%s(SSTI!)%s"  % (good, green,param,bold,yellow,end))
+                foundParams.insert(0, param)
+            else:
+                with print_lock:
+                    print("%s Found valid param (This might be false positive): %s%s%s" % (info, green,param,end))
     with print_lock:
         print("%s Trying: %s" % (info,param), end="\r", flush=True)
     #return breaker_lfi, breaker_rce
