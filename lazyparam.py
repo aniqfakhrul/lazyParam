@@ -229,13 +229,12 @@ if __name__ == "__main__":
                 # lfi and rce checking
                 start_time = time.time() # Start execution time
                 checkParams(response, url, headers)
-                print(foundParams)
                 if not foundParams:
                     print("%s No parameter found, trying bypassing techniques..." % info)
                     # bypassed_chars = checkParams()
                     intensive(response, url, headers)
                 else:
-                    print("\n%s Vulnerable parameters: "% good)
+                    print("\n\n%s Vulnerable parameters: "% good)
                     for param in foundParams:
                         print("%s " % param)
             except ConnectionError:
