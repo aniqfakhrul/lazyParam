@@ -20,7 +20,7 @@ print_lock = threading.Lock()
 q = Queue()
 currentMethod = 'GET' # method for threads to refer to
 num_threads = int(args.num_threads) # default 8 threads
-values = ['../../../../../../../../etc/passwd', 'w'] # values to fuzz LFI, RCE
+values = ['../../../../../../../../etc/passwd', 'w', '{{9999*9999}}'] # values to fuzz LFI, RCE, SSTTI
 bypass_char = '' # for threads to refer to
 
 url = args.url
@@ -66,6 +66,7 @@ def requester(url, method, data, headers):
         response = requests.post(url, data=data, headers=headers, verify=False)
     return response
 
+#Parse Web & Get Possible Parameter in Form
 def parse(response):
     forms = re.findall(r'(?i)(?s)<form.*?</form.*?>', response)
     print("%s Found possible parameters by parsing webpage: " % good,end="")
@@ -80,27 +81,34 @@ def parse(response):
         print("%s No parameters found in webpage:" % bad)
 
 def vulnerable(response, vuln):
-    if vuln == 'rce':
+    if vuln == 'rce': #Check RCE
         if 'tty' in response.lower():
             return True
         else:
             return False
-    if vuln == 'lfi':
+    if vuln == 'lfi': #Check LFI
         if 'root:' in response.lower():
             return True
         else:
             return False
+    #implementation of SSTI 
+    if vuln == 'ssti': #Check SSTI
+    	if '99980001' in response.lower():
+    	    return True
+    	else:
+    	    return False
 
 # checkParams iteration wrapped in one function
 def checkUrlParams(url, param, method, values, originalLength):
     breaker_rce = False
     breaker_lfi = False
+    breaker_ssti = False
     for value in values:
         value = '%s%s' % (value,bypass_char)
         data = {param:value}
         response = requester(url=url, method=method, data=data, headers=headers)
-        if len(response.text) != originalLength: # Found!
-            if value == 'w': #  RCE Found
+        if (len(response.text) != originalLength) and (response.status_code != 405): # Found!
+            if value == 'w' : #  RCE Found
                 if vulnerable(response.text, vuln="rce"):
                     with print_lock:
                         print("%s Found valid param: %s%s %s%s(RCE!)%s"  % (good, green,param,bold,yellow,end))
@@ -109,6 +117,18 @@ def checkUrlParams(url, param, method, values, originalLength):
                 else:
                     with print_lock:
                         print("%s Found valid param (This might be false positive): %s%s%s" % (info, green,param,end))
+                        
+            elif value == '{{9999*9999}}': #SSTI Found
+                if vulnerable(response.text, vuln="ssti"):
+                    with print_lock:
+                        print("%s Found valid param: %s%s %s%s(SSTI!)%s"  % (good, green,param,bold,yellow,end))
+                        foundParams.insert(0,param)
+                        breaker_ssti = True
+                else:
+                    with print_lock:
+                        print("%s Found valid param (This might be false positive): %s%s%s" % (info, green,param,end))
+                      
+          
             elif value != 'w': #LFI Found
                 if vulnerable(response.text, vuln="lfi"):
                     with print_lock:
@@ -122,17 +142,20 @@ def checkUrlParams(url, param, method, values, originalLength):
         print("%s Trying: %s" % (info,param), end="\r", flush=True)
     #return breaker_lfi, breaker_rce
 
+#Threader Function with receives param from Queue and originalLength
 def threader(originalLength):
     while True:
         param = q.get()
         checkUrlParams(url, param, currentMethod, values, originalLength)
         q.task_done()
 
+#Check GET & POST for all parameters found
 def checkParams(response, url, headers):
     global currentMethod
     currentMethod = 'GET'
     breaker_rce = False
     breaker_lfi = False
+    breaker_ssti = False
     originalLength = len(response.text)
     # check for GET method
     print("\n%s Checking for GET request..." % good)
@@ -151,6 +174,7 @@ def checkParams(response, url, headers):
     currentMethod = 'POST'
     breaker_rce = False
     breaker_lfi = False
+    breaker_ssti = False
     print("%s Checking for POST request..." % good)
     for param in paramList:
         # temp disable - difficult to orchestrate
@@ -211,7 +235,7 @@ if __name__ == "__main__":
                     # bypassed_chars = checkParams()
                     intensive(response, url, headers)
                 else:
-                    print("%s Vulnerable parameters: "% good)
+                    print("\n%s Vulnerable parameters: "% good)
                     for param in foundParams:
                         print("%s " % param)
             except ConnectionError:
