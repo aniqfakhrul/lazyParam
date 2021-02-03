@@ -49,7 +49,11 @@ else:
                     'Upgrade-Insecure-Requests' : '1',
                 }
 
-foundParams = []
+foundParams = {
+	"rce":[],
+	"lfi":[],
+	"ssti":[]
+}
 paramList = []
 try:
     with open(wordlist, 'r', encoding="utf8") as file:
@@ -113,21 +117,24 @@ def checkUrlParams(url, param, method, values, originalLength):
             if vulnerable(response.text, vuln="rce"): #  RCE Found
                 with print_lock:
                     print("%s Found valid param: %s%s %s%s(RCE!)%s"  % (good, green,param,bold,yellow,end))
-                    foundParams.insert(0, param)
+                    foundParams["rce"].append(param)
+                    #foundParams.insert(0, param)
                     breaker_rce = True
                     unknown_param_type = False 
 
             elif vulnerable(response.text, vuln="ssti"): #SSTI Found
                 with print_lock:
                     print("%s Found valid param: %s%s %s%s(SSTI!)%s"  % (good, green,param,bold,yellow,end))
-                    foundParams.insert(0,param)
+                    foundParams["ssti"].append(param)
+                    #foundParams.insert(0,param)
                     breaker_ssti = True 
                     unknown_param_type = False
 
             elif vulnerable(response.text, vuln="lfi"): #LFI Found
                 with print_lock:
                     print("%s Found valid param: %s%s%s (%s?%s=%s)"  % (good,green,param,end,url,param,value))
-                    foundParams.insert(0, param)
+                    foundParams["lfi"].append(param)
+                    #foundParams.insert(0, param)
                     breaker_lfi = True
                     unknown_param_type = False
             else:
@@ -185,8 +192,6 @@ def checkParams(response, url, headers):
         q.put(param)
     q.join()
 
-    return foundParams
-
 def intensive(response, url, headers):
     # loading bypassing wordlist
     bypass_chars = []
@@ -233,9 +238,18 @@ if __name__ == "__main__":
                     # bypassed_chars = checkParams()
                     intensive(response, url, headers)
                 else:
-                    print("\n\n%s Vulnerable parameters: "% good)
-                    for param in foundParams:
-                        print("%s " % param)
+                    if len(foundParams["rce"]) > 0:
+                        print("\n\n%s Vulnerable parameters (RCE): "% good)
+                        for param in foundParams["rce"]:
+                            print("%s " % param)
+                    if len(foundParams["lfi"]) > 0:
+                        print("\n\n%s Vulnerable parameters (LFI): "% good)
+                        for param in foundParams["lfi"]:
+                            print("%s " % param)
+                    if len(foundParams["ssti"]) > 0:
+                        print("\n\n%s Vulnerable parameters (SSTI): "% good)
+                        for param in foundParams["ssti"]:
+                            print("%s " % param)
             except ConnectionError:
                 print("%s Unable to connect to the target URL" % bad)
                 quit()
