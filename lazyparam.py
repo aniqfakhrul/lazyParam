@@ -58,10 +58,10 @@ def requester(url, method, data, headers):
 
 def parse(response):
     forms = re.findall(r'(?i)(?s)<form.*?</form.*?>', response)
+    print("%s Found possible parameters by parsing webpage: " % good,end="")
     for form in forms:
         if "input" in form.strip():
             names = re.findall(r"name=['\"](.*?)['\"]", form.strip())
-            print("%s Found possible parameters by parsing webpage: " % good,end="")
             for name in names:
                 if name not in paramList:
                     paramList.append(name)
