@@ -3,12 +3,15 @@
 import argparse
 import sys
 import requests
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
 import re
 import time
 import threading
 from queue import Queue
 from cores.colors import green, white, end, info, bad, good, run, yellow, bold
 from cores.utils import get_random_string,decode,encode
+
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-u',help='target url', dest='url')
@@ -30,7 +33,7 @@ cookie = args.cookie
 args = parser.parse_args(args=None if sys.argv[1:] else ['--help'])
 
 if cookie:
-    headers = {     
+    headers = {
                 'User-Agent' : 'Mozilla/5.0 (X11; Linux x86_64; rv:69.0) Gecko/20100101 Firefox/69.0',
                 'Accept' : 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
                 'Accept-Language' : 'en-US,en;q=0.5',
@@ -38,7 +41,7 @@ if cookie:
                 'Connection' : 'keep-alive',
                 'Upgrade-Insecure-Requests' : '1',
                 'Cookie':cookie,
-                }
+    }
 else:
     headers = {
                     'User-Agent' : 'Mozilla/5.0 (X11; Linux x86_64; rv:69.0) Gecko/20100101 Firefox/69.0',
@@ -47,7 +50,7 @@ else:
                     'Accept-Encoding' : 'gzip, deflate',
                     'Connection' : 'keep-alive',
                     'Upgrade-Insecure-Requests' : '1',
-                }
+    }
 
 foundParams = {
 	"rce":[],
