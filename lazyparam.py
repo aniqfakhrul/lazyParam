@@ -89,7 +89,7 @@ def parse(response):
 
 def vulnerable(response, vuln):
     if vuln == 'rce': #Check RCE
-        if 'tty' in response.lower():
+        if 'jcpu' in response.lower():
             return True
         else:
             return False
@@ -206,8 +206,6 @@ def intensive(response, url, headers):
         global bypass_char
         bypass_char = char
         checkParams(response, url, headers)
-
-
 
 
 if __name__ == "__main__":
